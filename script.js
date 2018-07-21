@@ -1,15 +1,16 @@
 const canvas = document.getElementById('canvas'),
 	canvas2 = document.getElementById('canvas2'),
 	palette = [
+		// p[5-n] is opposite p[n]
+		[248,219,14], // yellow
 		[194,1,21],   // red
 		[7,24,179],   // blue
-		[251,126,7],  // orange
-		[248,219,14], // yellow
 		[12,156,13],  // green
+		[251,126,7],  // orange
 		[255,255,255] // white
 	],
 	fudgeOffset = 0.15, fudgeMax = 0.9, fudgeGamma = 1.2,
-	w = 91, h = 57; // which is like 5000 rubiks cubes i mean really
+	w = 90, h = 57; // which is like 5000 rubiks cubes i mean really
 
 let ditherer;
 
@@ -27,7 +28,7 @@ load('matt.jpeg').then(init);
 function getImageData(img, w, h) {
 	const ctx = canvas.getContext('2d');
 	ctx.drawImage(img, 0, 0, w, h);
-	const imgData = ctx.getImageData(0, 0, img.width, img.height);
+	const imgData = ctx.getImageData(0, 0, w, h);
 	// fudge the image into range
 	for (let i = 0; i < imgData.data.length; ++i) if (i % 4 != 3)
 		imgData.data[i] = Math.pow(Math.pow(imgData.data[i] / 255, fudgeGamma)
@@ -46,12 +47,7 @@ async function init(img) {
 		ctx2 = canvas2.getContext('2d');
 	const imgData = getImageData(img, w, h),
 		imgData2 = getImageData(img2, w, h);
-	ditherer = new Ditherer(imgData, palette, {
-		pixelOrder: 'hilbert'
-	});
-	ditherer.dither();
-	ditherer = new Ditherer(imgData2, palette, {
-		pixelOrder: 'hilbert'
+	ditherer = new Biditherer(imgData, imgData2, palette, {
 	});
 	ditherer.dither();
 	ctx.putImageData(imgData, 0, 0);

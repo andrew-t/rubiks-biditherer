@@ -8,22 +8,23 @@ const canvas = document.getElementById('canvas'),
 		[12,156,13],  // green
 		[251,126,7],  // orange
 		[255,255,255] // white
-	],
-	fudgeOffset = 0.15, fudgeMax = 0.9, fudgeGamma = 1.2,
+	].map(c => c.map(c => ((c / 255) ** 1.2) * 255)),
+	fudgeOffset = 0.2, fudgeMax = 0.9, fudgeGamma = 1.2,
+//	w = 120, h = 90;
 	w = 90, h = 57; // which is like 5000 rubiks cubes i mean really
 
 let ditherer;
 
-function load(fn) {
+function load(el) {
 	return new Promise((resolve, reject) => {
 		const img = new Image();
 		img.onload = () => resolve(img);
 		img.onerror = (e) => reject(e);
-		img.src = fn;
+		img.src = document.getElementById(el).getAttribute('src');
 	});
 }
 
-load('matt.jpeg').then(init);
+load('original').then(init);
 
 function getImageData(img, w, h) {
 	const ctx = canvas.getContext('2d');
@@ -38,7 +39,7 @@ function getImageData(img, w, h) {
 }
 
 async function init(img) {
-	const img2 = await load('matt.jpg');
+	const img2 = await load('original2');
 	canvas.width = w;
 	canvas.height = h;
 	canvas2.width = w;
@@ -48,6 +49,7 @@ async function init(img) {
 	const imgData = getImageData(img, w, h),
 		imgData2 = getImageData(img2, w, h);
 	ditherer = new Biditherer(imgData, imgData2, palette, {
+		distanceFactor: [ 0.8, 1.0, 0.6 ]
 	});
 	ditherer.dither();
 	ctx.putImageData(imgData, 0, 0);

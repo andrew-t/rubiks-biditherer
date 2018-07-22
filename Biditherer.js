@@ -145,7 +145,7 @@ class Biditherer {
 			gamma = 1 / (this.options.gamma || 1.2),
 			col = this.data.map(d => d.slice(i, i + 3) // opacity be damned
 				.map(c => ((c / 256) ** gamma) * 256));
-		if (Biditherer.flatten(col).some(isNaN)) throw new Error('pix is nan');
+		// if (Biditherer.flatten(col).some(isNaN)) throw new Error('pix is nan');
 		return col;
 	}
 
@@ -162,10 +162,10 @@ class Biditherer {
 	distance(a, b) {
 		// TODO - this should probably not add errors from different images
 		// (and maybe not different pixels) in quadrature
-		return Math.sqrt(Ditherer
+		return Ditherer
 			.join(Biditherer.flatten(a), Biditherer.flatten(b),
-				(a, b) => (a - b) * (a - b))
-			.reduce((p, n) => p + n));
+				(a, b) => Math.abs(a - b))
+			.reduce((p, n) => p + n);
 	}
 
 	nearest(target, candidates) {
@@ -183,9 +183,9 @@ class Biditherer {
 			distance: error,
 			nearest: best
 		};
-		if (isNaN(result.distance)) throw new Error('distance is nan');
-		if (Biditherer.flatten(result.error).some(isNaN)) throw new Error('error is nan');
-		if (Biditherer.flatten(result.nearest).some(isNaN)) throw new Error('nearest is nan');
+		// if (isNaN(result.distance)) throw new Error('distance is nan');
+		// if (Biditherer.flatten(result.error).some(isNaN)) throw new Error('error is nan');
+		// if (Biditherer.flatten(result.nearest).some(isNaN)) throw new Error('nearest is nan');
 		return result;
 	}
 

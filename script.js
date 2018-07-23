@@ -27,8 +27,16 @@ function load(el) {
 load('original').then(init);
 
 function getImageData(img, w, h) {
-	const ctx = canvas.getContext('2d');
-	ctx.drawImage(img, 0, 0, w, h);
+	const ctx = canvas.getContext('2d'),
+		aspect = w / h,
+		imgAspect = img.width / img.height;
+	if (imgAspect > aspect) {
+		const newW = img.height * aspect;
+		ctx.drawImage(img, ~~((img.width - newW) / 2), 0, newW, img.height, 0, 0, w, h);
+	} else {
+		const newH = img.width / aspect;
+		ctx.drawImage(img, 0, ~~((img.height - newH) / 2), img.width, newH, 0, 0, w,h);
+	}
 	const imgData = ctx.getImageData(0, 0, w, h);
 	// fudge the image into range
 	for (let i = 0; i < imgData.data.length; ++i) if (i % 4 != 3)

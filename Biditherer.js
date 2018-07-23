@@ -28,15 +28,16 @@ class Biditherer {
 		this.edgeCandidates = pal8
 			.filter(Biditherer.edgesCanBeDone)
 			.map(c => c.map(c => this.palette[c]));
-		console.log('ideal edge options:', pal8.length);
+		console.log('ideal 4-cubelet options:', pal8.length);
 		console.log('edge options:', this.edgeCandidates.length);
+		console.log('diff:', pal8.length - this.edgeCandidates.length);
 		console.log('now corners', s - Date.now());
 		this.cornerCandidates = pal8
 			.filter(Biditherer.cornersCanBeDone)
 			.map(c => c.map(c => this.palette[c]));
-		console.log('done', s - Date.now());
-		console.log('ideal corner options:', pal8.length);
 		console.log('corner options:', this.cornerCandidates.length);
+		console.log('diff:', pal8.length - this.cornerCandidates.length);
+		console.log('done filtering', s - Date.now());
 		this.pixDone = 0;
 		this.totalPix = this.width * this.height;
 		this.hardPixels = this.easyPixels = 0;
@@ -46,7 +47,7 @@ class Biditherer {
 
 	static countsPerColor(c) {
 		const count = [0, 0, 0, 0, 0, 0];
-		for (let i = 6; i; ++count[c[--i]]);
+		for (let i = c.length; i; ++count[c[--i]]);
 		return count;
 	}
 
@@ -57,7 +58,7 @@ class Biditherer {
 			// you can't have more than 4 of any colour
 			if (iCount > 4) return false;
 			// if you have four of one then you can't have four of an adjacent one or there's an edge you're using twice.
-			if (counts[i] == 4)
+			if (iCount == 4)
 				for (let j = 0; j < 6; ++j)
 					if (j != i && j != 5 - i && counts[j] == 4)
 						return false;
@@ -72,7 +73,7 @@ class Biditherer {
 			// you can't have more than 4 of any colour
 			if (iCount > 4) return false;
 			// and if you have four the same...
-			if (counts[i] < 4) continue;
+			if (iCount < 4) continue;
 			// ... then for the adjacent colours...
 			for (let j = 0; j < 6; ++j) if (j != i && j != 5 - i) {
 				const jCount = counts[j];

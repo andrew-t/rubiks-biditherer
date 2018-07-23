@@ -39,51 +39,54 @@ class Biditherer {
 		console.log('corner options:', this.cornerCandidates.length);
 		this.pixDone = 0;
 		this.totalPix = this.width * this.height;
+		this.hardPixels = this.easyPixels = 0;
 	}
 
 	// bad practice ahoy: these functions assume a lot about the palette:
 
-	static edgesCanBeDone(c, i) {
-		// you can't have more than 4 of any colour
-		for (let i = 0; i < 6; ++i)
-			if (c.filter(c => c == i).length > 4)
-				return false;
-		// you also can't have all four be the same colour on both sides
-		// unless those colours are opposites.
-		if (c[0] == c[1] && c[1] == c[2] && c[2] == c[3] &&
-			c[4] == c[5] && c[5] == c[6] && c[6] == c[7] &&
-			c[4] == 5 - c[0])
-				return false;
+	static countsPerColor(c) {
+		const count = [0, 0, 0, 0, 0, 0];
+		for (let i = 6; i; ++count[c[--i]]);
+		return count;
+	}
+
+	static edgesCanBeDone(c) {
+		const counts = Biditherer.countsPerColor(c);
+		for (let i = 0; i < 6; ++i) {
+			const iCount = counts[i];
+			// you can't have more than 4 of any colour
+			if (iCount > 4) return false;
+			// if you have four of one then you can't have four of an adjacent one or there's an edge you're using twice.
+			if (counts[i] == 4)
+				for (let j = 0; j < 6; ++j)
+					if (j != i && j != 5 - i && counts[j] == 4)
+						return false;
+		}
 		return true;
 	}
 
-	static cornersCanBeDone(c, i) {
-		// you can't have more than 4 of any colour
-		for (let i = 0; i < 6; ++i)
-			if (c.filter(c => c == i).length > 4)
-				return false;
-		// and if all four are the same on one side...
-		if (c[0] == c[1] && c[1] == c[2] && c[2] == c[3])
-			return fourTheSame(c[0], c.slice(4));
-		else if (c[4] == c[5] && c[5] == c[6] && c[6] == c[7])
-			return fourTheSame(c[4], c.slice(0, 4));
-		else return true;
-		function fourTheSame(col, others) {
-			// you can't have three or more the same unless it's the opposite colour
-			for (let i = 0; i < 6; ++i)
-				if (i != 5 - col &&
-					others.filter(c => c == i).length > 2)
-						return false;
-			// you also can't have two pairs of two unless
-				// (a) they're opposites, or
-				// (b) one is the opposite of the uniform face
-			for (let i = 0; i < 6; ++i)
-				if (i != 5 - col && others.filter(c => c == i).length > 1)
-					for (let j = 0; j < 6; ++j)
-						if (j != i && j != 5 - col && j != 5 - i &&
-							others.filter(c => c == j).length > 1)
-								return false;
+	static cornersCanBeDone(c) {
+		const counts = Biditherer.countsPerColor(c);
+		for (let i = 0; i < 6; ++i) {
+			const iCount = counts[i];
+			// you can't have more than 4 of any colour
+			if (iCount > 4) return false;
+			// and if you have four the same...
+			if (counts[i] < 4) continue;
+			// ... then for the adjacent colours...
+			for (let j = 0; j < 6; ++j) if (j != i && j != 5 - i) {
+				const jCount = counts[j];
+				/// ...you can't have three or more of any one of them
+				if (jCount >= 3) return false;
+				// and if you have two of one of them...
+				if (jCount < 2) continue;
+				// ...then you can't have a pair of any colour adjacent to both
+				for (let k = 0; k < 6; ++k)
+					if (k != i && k != 5 - i && k != j && k != 5 - j)
+						if (counts[k] >= 2) return false;
+			}
 		}
+		return true;
 	}
 
 	dither() {
@@ -95,6 +98,7 @@ class Biditherer {
 		console.log('dithering corners', this.startTime - Date.now());
 		this.ditherCorners();
 		console.log('done', this.startTime - Date.now());
+		console.log(`hard pixels: ${this.hardPixels} (${this.hardPixels * 100 / (this.hardPixels + this.easyPixels)}%)`);
 	}
 
 	ditherCentres() {
@@ -169,7 +173,8 @@ class Biditherer {
 			// i guess we have to actually check all a-million combinations...
 			// console.log('oh dear'); return;
 			({ error, nearest } = this.nearest(cols, candidates));
-		}
+			++this.hardPixels;
+		} else ++this.easyPixels;
 		pixels.forEach(({ x, y }, i) => {
 			this.setPixel(x, y, [ nearest[i], nearest[i + 4] ]);
 			this.diffuseError([ error[i], error[i + 4] ], x, y);

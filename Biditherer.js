@@ -157,7 +157,7 @@ class Biditherer {
 	ditherPixels(pixels, candidates, isValid) {
 		const cols = [];
 		// let's just take the nearest colour to each pixel and really hope it makes a valid combination
-		pixels.forEach(({ x, y }, i) => [cols[i], cols[i + 4]] = this.getPixel(x, y));	
+		pixels.forEach(({ x, y }, i) => [cols[i], cols[i + 4]] = this.getPixel(x, y));
 		let { error, nearest } = cols
 			.map(c => this.nearest([ c ], this.wrappedPalette))
 			.reduce((p, n) => ({

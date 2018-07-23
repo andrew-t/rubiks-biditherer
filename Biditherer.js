@@ -131,7 +131,7 @@ class Biditherer {
 	*unfilteredCentreCoords() {
 		const cy = this.centreCentre(this.height),
 			cx = this.centreCentre(this.width),
-			d = cx + cy + 2;
+			d = cx + cy + 5;
 		yield { x: cx, y: cy };
 		for (let i = 3; i < d; i += 3) 
 			for (let j = 0; j < i; j += 3) {

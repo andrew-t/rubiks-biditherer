@@ -195,7 +195,7 @@ class Biditherer {
 				if (this.needsToDither(x + dx, y + dy))
 					this.addError(x + dx, y + dy, error, this.ditheriness(dx, dy) / totalDiffusion);
 	}
-	ditheriness(x, y) { return (!x && !y) ? 0 : ((x && y) ? (this.options.cornerDitheriness || 0.5) : (this.options.sideDitheriness || 0.5)); }
+	ditheriness(x, y) { return (!x && !y) ? 0 : ((x && y) ? (this.options.cornerDitheriness || 0.25) : (this.options.sideDitheriness || 0.5)); }
 	needsToDither(x, y) { return !!this.toDither[y] && this.toDither[y][x]; }
 	addError(x, y, error, multiplier) {
 		const i = (x + y * this.width) * 4,

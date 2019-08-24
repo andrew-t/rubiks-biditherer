@@ -19,11 +19,14 @@ class Biditherer {
 				this.toDither[y][x] = true;
 		}
 		this.centreCandidates = this.palette.map((col, i) => [ col, this.palette[5 - i]]);
-		const s = Date.now(); console.log('crossing', s - Date.now());
+		const s = Date.now();
+		// next, build up a 'palette' of the original six colours crossed together a bunch of times: essentially this is every option for a set of eight blocks, which we use both for the edges and the corners, but filtered differently. they're stored as indices rather than reproducing the colour values every time.
+		console.log('crossing', s - Date.now());
 		const palIs = this.palette.map((x, i) => i),
 			pal2 = Biditherer.cross(palIs, palIs),
 			pal4 = Biditherer.cross(pal2, pal2),
 			pal8 = Biditherer.cross(pal4, pal4).map(Biditherer.flatten);
+		// now we filter them to the combinations which (i think) can be made using the edge pieces (eg, they cant *all* be green) and the corner pieces
 		console.log('filtering', s - Date.now());
 		this.edgeCandidates = pal8
 			.filter(Biditherer.edgesCanBeDone)
@@ -38,6 +41,7 @@ class Biditherer {
 		console.log('corner options:', this.cornerCandidates.length);
 		console.log('diff:', pal8.length - this.cornerCandidates.length);
 		console.log('done filtering', s - Date.now());
+		// lastly set a few tracking variables
 		this.pixDone = 0;
 		this.totalPix = this.width * this.height;
 		this.hardPixels = this.easyPixels = 0;
@@ -45,12 +49,14 @@ class Biditherer {
 
 	// bad practice ahoy: these functions assume a lot about the palette:
 
+	// very basic histogramming function:
 	static countsPerColor(c) {
 		const count = [0, 0, 0, 0, 0, 0];
 		for (let i = c.length; i; ++count[c[--i]]);
 		return count;
 	}
 
+	// for a given set of 8 colours, can it be made using the edge pieces of a rubik's cube?
 	static edgesCanBeDone(c) {
 		const counts = Biditherer.countsPerColor(c);
 		for (let i = 0; i < 6; ++i) {
@@ -66,6 +72,7 @@ class Biditherer {
 		return true;
 	}
 
+	// for a given set of 8 colours, can it be made using the corner pieces of a rubik's cube?
 	static cornersCanBeDone(c) {
 		const counts = Biditherer.countsPerColor(c);
 		for (let i = 0; i < 6; ++i) {
@@ -133,6 +140,7 @@ class Biditherer {
 			if (x > 0 && x < this.width && y > 0 && y < this.height)
 				yield { x, y };
 	}
+	// the simple for-x-for-y version above kind of prioritises the top of the image which is not ideal really, this starts in the middle and sort-of spirals outwards so the middle is better and the corners are a bit pants, it is a wierd algorithm but it works, i think
 	*unfilteredCentreCoords() {
 		const cy = this.centreCentre(this.height),
 			cx = this.centreCentre(this.width),
@@ -146,6 +154,7 @@ class Biditherer {
 				yield { x: cx - i + j, y: cy + j};
 			}
 	}
+	// finds the centre of the cube nearest the middle, usually not the actual middle pixel
 	centreCentre(len) { return Math.round(len / 6) * 3 - 2; }
 
 	ditherPixel(x, y, candidates) {
@@ -154,6 +163,11 @@ class Biditherer {
 		this.setPixel(x, y, nearest);
 		this.diffuseError(error, x, y);
 	}
+	// accepts a set of pixels and a set of candidate colour sets —
+	// so if pixels is 4 long, candidates should be an array of four-long arrays.
+	// also isValid is the function that checks if a particular combination is allowed,
+	// because actually we do it naively first, check if it's ok,
+	// and only use the supplied candidate list if it's not, because that's way slower.
 	ditherPixels(pixels, candidates, isValid) {
 		const cols = [];
 		// let's just take the nearest colour to each pixel and really hope it makes a valid combination
@@ -229,6 +243,9 @@ class Biditherer {
 				this.startTime - Date.now());
 	}
 
+	// gives the distance between two vectors, in this case two colours.
+	// this is weighted a bit because really who cares if the blue channel is fuzzy?
+	// not the human eye, that's for sure!
 	distance(a, b) {
 		let d = 0, ai, i = a.length;
 		while (i) {
@@ -239,6 +256,7 @@ class Biditherer {
 		return d;
 	}
 
+	// finds the nearest candidate to the target
 	nearest(target, candidates) {
 		let error = Infinity, best = null;
 		candidates.forEach(candidate => {
@@ -260,19 +278,26 @@ class Biditherer {
 		return result;
 	}
 
+	// same as ditherer.join, but acts on inner arrays
 	static join2(a, b, mapper) {
 		return Ditherer.join(a, b,
 			(a, b) => Ditherer.join(a, b, mapper));
 	}
 
+	// Flattens any depth of array
 	static flatten(a) {
 		return Array.isArray(a) ? Biditherer.flatten1(a.map(Biditherer.flatten)) : a;
 	}
 
+	// Flattens one layer of an array
 	static flatten1(a) {
 		return Array.isArray(a[0]) ? a.reduce((p, n) => p.concat(n)) : a;
 	}
 
+	// Returns the cross product of two arrays:
+	// [ a1, a2 ] x [ b1, b2 ] would return
+	// [ [a1,b1], [a1,b2], [a2,b1], [a2,b2] ]
+	// which is to say every combination (in some logical order)
 	static cross(a, b) {
 		return Biditherer.flatten1(a.map(a => b.map(b => [ a, b ])));
 	}

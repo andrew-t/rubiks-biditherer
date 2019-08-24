@@ -96,6 +96,8 @@ class Ditherer {
 		};
 	}
 
+	// returns an array where each array[i] = mapper(a[i], b[i])
+	// or, if mapper is omitted, array[i] = { a: a[i], b: b[i] }
 	static join(a, b, mapper) {
 		if (a.length != b.length)
 			throw new Error('Length mismatch');
@@ -107,6 +109,8 @@ class Ditherer {
 			: arr;
 	}
 
+	// applies a function to every element of an array,
+	// replacing the element with the return value
 	static mapInPlace(arr, func) {
 		arr.forEach((n, i) => arr[i] = func(n, i));
 	}

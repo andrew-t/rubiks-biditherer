@@ -84,7 +84,7 @@ class Biditherer {
 			// ... then for the adjacent colours...
 			for (let j = 0; j < 6; ++j) if (j != i && j != 5 - i) {
 				const jCount = counts[j];
-				/// ...you can't have three or more of any one of them
+				// ...you can't have three or more of any one of them
 				if (jCount >= 3) return false;
 				// and if you have two of one of them...
 				if (jCount < 2) continue;
@@ -186,7 +186,19 @@ class Biditherer {
 		});
 		if (!isValid(indices)) {
 			// i guess we have to actually check all a-million combinations...
-			// console.log('oh dear'); return;
+
+			// TODO: This is where I think the big time savings are to be made:
+			// instead of now churning through all 16m combinations,
+			// we could find the least-bad colour swap —
+			// eg, pixel 3 ought to be orange but actually is pretty close to red
+			// — and see if that makes the combo valid.
+			// If not, try the second-best swap
+			// and just keep going until we hit something that's OK.
+			// It won't be as perfect as the current algorithm,
+			// but hopefully we'd have to check 3 options instead of ~16m.
+
+			// And hey, we can always run the original version for the actual stunt.
+
 			({ error, nearest } = this.nearest(cols, candidates));
 			++this.hardPixels;
 		} else ++this.easyPixels;

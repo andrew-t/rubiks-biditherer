@@ -1,7 +1,7 @@
 // adapted from https://github.com/shkolovy/hilbert-curve-js/blob/master/HilbertCurve/base.js
 
 function HilbertCurve() {
-   var points = [];
+    var points = [];
     
     var Direction = {
         Left: 0,

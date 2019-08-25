@@ -163,12 +163,13 @@ class Biditherer {
 		this.setPixel(x, y, nearest);
 		this.diffuseError(error, x, y);
 	}
+	
 	// accepts a set of pixels and a set of candidate colour sets —
 	// so if pixels is 4 long, candidates should be an array of four-long arrays.
 	// also isValid is the function that checks if a particular combination is allowed,
 	// because actually we do it naively first, check if it's ok,
 	// and only use the supplied candidate list if it's not, because that's way slower.
-	ditherPixels(pixels, candidates, isValid) {
+	ditherPixelsSlow(pixels, candidates, isValid) {
 		const cols = [];
 		// let's just take the nearest colour to each pixel and really hope it makes a valid combination
 		pixels.forEach(({ x, y }, i) => [cols[i], cols[i + 4]] = this.getPixel(x, y));
@@ -206,6 +207,97 @@ class Biditherer {
 			this.setPixel(x, y, [ nearest[i], nearest[i + 4] ]);
 			this.diffuseError([ error[i], error[i + 4] ], x, y);
 		});
+	}
+	
+	// identical to the above but faster
+	ditherPixelsFast(pixels, candidates, isValid) {
+		// grab the colours rather than the coords:
+		const cols = [];
+		pixels.forEach(({ x, y }, i ) => [cols[i], cols[i + 4]] = this.getPixel(x, y));
+		// now work out the error from each pixel to each palette colour
+		const options = cols.map(pixel => 
+			this.palette.map(pCol =>
+				this.distance([ pixel ], [ pCol ])));
+		// from here we can get the best option for each pixel
+		const best = options.map(pixOpts =>
+			pixOpts.map((error, i) => ({ error, i }))
+				.sort((a, b) => a.error - b.error));
+		// offset them so the best error is zero, might make the next step easier:
+		best.forEach(pixOpts => pixOpts.forEach(pOpt => pOpt.error -= pixOpts[0].error));
+
+		// this is the order we're going to swap the pixels out in:
+		const sortedBest = best.map((opts, i) => ({ opts, i }))
+			.sort((a, b) => a.opts[1].error - b.opts[1].error);
+		// pick the best combination we can lazily find:
+		try {
+			const indices = Biditherer.bestIndices(sortedBest, isValid);
+
+			// now drag this back to a sensible format, ugh
+			const final = [];
+			for (let i = 0; i < indices.length; ++i) {
+				const pixel = sortedBest[i].i,
+					colour = sortedBest[i].opts[indices[i]];
+				final[pixel] = colour;
+			}
+
+			// now, set the pixel data:
+			for (let i = 0; i < pixels.length; ++i) {
+				const { x, y } = pixels[i],
+					choices = [
+						this.palette[final[i].i],
+						this.palette[final[i + 4].i]
+					];
+				this.setPixel(x, y, choices);
+				this.diffuseError([
+					choices[0].map((c, j) => cols[i][j] - c),
+					choices[1].map((c, j) => cols[i + 4][j] - c)
+				], x, y);
+			};
+		} catch(e) {
+			if (!e.noIndices) throw e;
+			console.warn('Oh dear, doing a pixel longhand');
+			this.ditherPixelsSlow(pixels, candidates, isValid);
+		}
+	}
+
+	static bestIndices(sortedBest, isValid) {
+		for (const indices of Biditherer.eachIndex(sortedBest.length)) {
+			const trueIndices = [];
+			for (let i = 0; i < sortedBest.length; ++i) {
+				const s = sortedBest[i];
+				trueIndices[s.i] = s.opts[indices[i]].i;
+			}
+			if (isValid(trueIndices))
+				return indices;
+		}
+		const e = new Error('Could not find any valid indices');
+		e.noIndices = true;
+		throw e;
+	}
+
+	static *eachIndex(n) {
+		const base = [];
+		for (let i = 0; i < n; ++i) base.push(0);
+		// first, try the default:
+		yield base;
+		// next try anything with one swap:
+		for (let i = 0; i < n; ++i) yield base.map((n, j) => +(i == j));
+		// next try swapping two tiles:
+		for (let i = 0; i < n - 1; ++i) for (let j = 1; j < n; ++j)
+			if (i != j) yield base.map((n, k) => +(k == j || k == i));
+		return; // this seems fine tbh, good balance of speed and accuracy?
+		// next try swapping three tiles:
+		for (let i = 0; i < n - 2; ++i)
+			for (let j = 1; j < n - 1; ++j) if (i != j)
+				for (let k = 2; k < n; ++k) if (k != i && k != j)
+					yield base.map((n, l) => +(l == j || l == i || l == k));
+		// next try anything with one double-swap:
+		for (let i = 0; i < n; ++i) yield base.map((n, j) => i == j ? 2 : 0);
+		// next try anything with one double-swap and a single-swap:
+		for (let i = 0; i < n; ++i) for (let j = 0; j < n; ++j)
+			if (i != j) yield base.map((n, k) => k == i ? 2 : +(k == j));
+		// that should really be enough, let's try it,
+		// it's not bulletproof but maybe it's enough?
 	}
 
 	diffuseError(error, x, y) {
@@ -314,3 +406,7 @@ class Biditherer {
 		return Biditherer.flatten1(a.map(a => b.map(b => [ a, b ])));
 	}
 }
+
+// choose a strategy
+Biditherer.prototype.ditherPixels =
+	Biditherer.prototype.ditherPixelsFast;
